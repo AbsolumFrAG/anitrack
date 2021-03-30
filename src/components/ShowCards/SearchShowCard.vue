@@ -1,0 +1,146 @@
+<template>
+  <div class="search-card-container">
+    <img :src="data.coverImage.large || data.coverImage.medium" />
+    <div class="search-card-data-container">
+      <div class="search-card-data-title">
+        {{ data.title.english || data.title.romaji || "titre pas trouvé" }}
+      </div>
+      <div class="search-card-sub-data-container">
+        <div>
+          {{ "Saison :  " + data.season.toLowerCase() + " " + data.seasonYear }}
+        </div>
+        <div>{{ "Épisodes :  " + data.episodes }}</div>
+        <div>{{ "Statut :  " + data.status.toLowerCase() }}</div>
+      </div>
+      <div
+        v-if="!isAdded"
+        @click="handle_add_show"
+        class="search-card-button-not-added"
+      >
+        Ajouter
+      </div>
+      <div v-else>
+        <SearchShowStatusSelector
+          :data="show_data"
+          :handle_add_show="handle_add_show"
+          :isAdded="isAdded"
+        />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+// vue functions
+import { ref } from "vue";
+
+// components
+import SearchShowStatusSelector from "../Selector/SearchShowStatusSelector";
+
+export default {
+    name: "SearchShowCard",
+    props: ["data"],
+    components: {
+        SearchShowStatusSelector,
+    },
+    setup(props) {
+        const isAdded = ref(false);
+        const show_data = ref(props.data);
+
+        function handle_add_show() {
+            isAdded.value = !isAdded.value;
+
+            function handle_filter(item) {
+                return item.id !== props.data.id;
+            }
+
+            // get the local storage ref
+            const ls = JSON.parse(localStorage.getItem("added_shows"));
+
+            // if added
+            if (isAdded.value) {
+                let show_data_temp = props.data;
+                let user_show_data = {
+                    status: "watching",
+                    watched_episodes: 0,
+                    total_episodes: show_data_temp.episodes,
+                    user_rating: null,
+                };
+                show_data_temp.user_show_data = user_show_data;
+                ls.push(show_data_temp);
+                localStorage.setItem("added_shows", JSON.stringify(ls));
+            }
+            // not added
+            else {
+                const filtered = ls.filter((item) => handle_filter(item));
+                localStorage.setItem("added_shows", JSON.stringify(filtered));
+            }
+        }
+
+        return {
+            isAdded,
+            show_data,
+            handle_add_show,
+        };
+    },
+    mounted() {
+        const ls = JSON.parse(localStorage.getItem("added_shows"));
+        ls.forEach((element) => {
+            if (element.id === this.$props.data.id) {
+                this.isAdded = true;
+                this.show_data.status = element.status;
+            }
+        });
+    },
+};
+</script>
+
+<style scoped>
+.search-card-container {
+  width: 100%;
+  height: 20vmin;
+  background: var(--background-secondary);
+  color: var(--text-color);
+  box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  margin-top: 20px;
+  display: flex;
+  font-size: bolder;
+}
+.search-card-container img {
+  width: auto;
+  height: 100%;
+  border-radius: 6px 0 0 6px;
+}
+.search-card-data-container {
+  font-family: "Overpass", sans-serif;
+  padding: 1vmin 0 1vmin 5vmin;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.search-card-data-title {
+  width: 54vmin;
+  font-size: 3vmin;
+  opacity: 0.9;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.search-card-sub-data-container {
+  font-size: 1.8vmin;
+  opacity: 0.6;
+  padding: 1vmin 0 2vmin 0;
+}
+.search-card-button-not-added {
+  width: 150px;
+  border-radius: 3px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.3vmin;
+  border: 1px solid;
+  border-color: var(--text-color);
+  cursor: pointer;
+}
+</style>
